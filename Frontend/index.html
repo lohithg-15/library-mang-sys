@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Book Finder</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Login Page (shown when not authenticated) -->
+<div id="loginContainer" class="login-page">
+    <div class="login-box">
+        <div class="login-header">
+            <h1>📚 Smart Book Finder</h1>
+            <p>Intelligent Book Management System</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="login-form">
+            <h2>Choose Your Role</h2>
+            <p class="login-subtitle">Sign in to continue</p>
+
+            <div class="role-selector">
+                <button class="role-btn active" data-role="shopkeeper">
+                    🏪 Shopkeeper Login
+                </button>
+                <button class="role-btn" data-role="customer">
+                    👤 Customer (No Login)
+                </button>
+            </div>
+
+            <form id="authForm">
+                <div id="credentialsSection" style="display: block;">
+                    <div class="form-group">
+                        <label for="username">Username:</label>
+                        <input type="text" id="username" placeholder="Enter username" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" placeholder="Enter password" required />
+                    </div>
+                    <button type="submit" class="btn-primary" id="loginBtn">Login as Shopkeeper</button>
+                </div>
+
+                <div id="customerLoginSection" style="display: none;">
+                    <p class="customer-message">Welcome! You can search for books without creating an account.</p>
+                    <button type="button" class="btn-primary" id="customerBtn">Continue as Customer</button>
+                </div>
+            </form>
+
+            <div id="loginError" class="error-message" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Main App (shown after login/customer mode) -->
+<div id="appContainer" class="app-page" style="display: none;">
+    <div class="container">
+        <!-- Header with User Info & Logout -->
+        <div class="header">
+            <div class="header-left">
+                <h1>📚 Smart Book Finder</h1>
+                <p class="subtitle">Intelligent Book Management System</p>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <span id="userRole" class="user-badge"></span>
+                    <span id="userName" class="user-name"></span>
+                </div>
+                <button id="logoutBtn" class="btn-logout">🔓 Logout</button>
+            </div>
+        </div>
+
+        <!-- Shopkeeper Section (Only visible if shopkeeper) -->
+        <div id="shopkeeperSection" style="display: none;">
+            <div class="card upload-card">
+                <h2>📤 Upload Book</h2>
+                <p class="card-subtitle">Add a new book to inventory</p>
+                <form id="uploadForm">
+                    <div class="form-group">
+                        <label for="image">Select Book Image:</label>
+                        <input type="file" id="image" accept="image/*" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity">Quantity:</label>
+                        <input type="number" id="quantity" placeholder="Number of copies" min="1" value="1" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="shelf">Shelf Location:</label>
+                        <input type="text" id="shelf" placeholder="e.g. A2, B3, etc." required />
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">📤 Upload Book</button>
+                        <button type="button" id="clearUploadBtn" class="btn-secondary">Clear</button>
+                    </div>
+                </form>
+                <div id="uploadResult" class="upload-result-container"></div>
+            </div>
+
+            <!-- Debug Section -->
+            <div class="card debug-card" style="margin-top: 20px;">
+                <h2>🔧 Shopkeeper Tools</h2>
+                <div class="debug-buttons">
+                    <button id="debugBtn" class="btn-debug">📊 View All Books</button>
+                    <button id="resetDbBtn" class="btn-danger">🗑️ Reset Database</button>
+                    <button id="listUsersBtn" class="btn-debug">👥 List Users</button>
+                </div>
+                <div id="debugResult" class="debug-result"></div>
+            </div>
+        </div>
+
+        <!-- Customer Section (Search - visible to all) -->
+        <div id="customerSection" style="display: block;">
+            <div class="card search-card">
+                <h2>🔍 Search Book</h2>
+                <p class="card-subtitle">Find books by title or author</p>
+                <div class="search-form">
+                    <label for="searchQuery">Enter Book Name or Author:</label>
+                    <input type="text" id="searchQuery" placeholder="Type here... e.g., 'Gatsby', 'Harper', '1984'" autocomplete="off" />
+                    <button id="searchBtn" class="btn-primary">🔍 Search</button>
+                </div>
+                <div id="searchResult" class="results-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="backendStatus" class="status-indicator initializing">⏳ Connecting...</div>
+
+<script src="script.js"></script>
+</body>
+</html>
