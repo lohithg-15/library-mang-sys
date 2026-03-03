@@ -218,8 +218,8 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.user-badge.shopkeeper {
-    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+.user-badge.admin {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
 }
 
@@ -672,9 +672,9 @@ input[type="file"] {
     font-weight: 600;
 }
 
-.role-badge.shopkeeper {
-    background: #ffebee;
-    color: #c62828;
+.role-badge.admin {
+    background: #e8eaf6;
+    color: #3949ab;
 }
 
 .role-badge.customer {

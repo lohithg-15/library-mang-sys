@@ -33,13 +33,13 @@ python -m http.server 5500
 
 http://localhost:5500  
 
-**Login:** `shopkeeper` / `shopkeeper123` — or **Continue as Customer** (no login).
+**Login:** `admin` / `admin123` — or **Continue as Customer** (no login).
 
 ---
 
 ## What you can do
 
-**Shopkeeper:** Upload book images (auto title/author + Open Library identification), view/reset books, list users.  
+**Admin:** Upload book images (auto title/author + Open Library identification), add books manually, edit quantity/shelf, view/reset books, list users.  
 
 **Customer:** Search by title or author (typo-tolerant; “Did you mean?” when applicable). No login.
 

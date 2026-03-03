@@ -11,11 +11,11 @@ from typing import Optional
 sys.path.insert(0, os.path.dirname(__file__))
 
 from ocr import extract_text_from_image, extract_book_fields, extract_book_fields_with_gemini, _get_easyocr_reader, _is_likely_author_names, GEMINI_API_KEY
-from database import create_table, insert_book, search_books, search_books_fuzzy, get_all_books, delete_all_books
+from database import create_table, insert_book, search_books, search_books_fuzzy, get_all_books, delete_all_books, update_book, get_books_with_ids
 from book_lookup import identify_book
 from auth import (
     create_users_table, login_user, register_user, verify_token, 
-    get_user_by_id, list_all_users, ROLE_SHOPKEEPER, ROLE_CUSTOMER
+    get_user_by_id, list_all_users, ROLE_ADMIN, ROLE_CUSTOMER
 )
 
 app = FastAPI()
@@ -52,10 +52,10 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
     return payload
 
 
-async def get_shopkeeper_user(current_user: dict = Depends(get_current_user)):
-    """Ensure user is a shopkeeper"""
-    if current_user.get("role") != ROLE_SHOPKEEPER:
-        raise HTTPException(status_code=403, detail="Shopkeeper access required")
+async def get_admin_user(current_user: dict = Depends(get_current_user)):
+    """Ensure user is an admin"""
+    if current_user.get("role") != ROLE_ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
     return current_user
 
 
@@ -121,7 +121,7 @@ def status():
 
 @app.post("/auth/register/")
 def register(username: str = Form(...), password: str = Form(...), role: str = Form(default=ROLE_CUSTOMER)):
-    """Register a new user (customer or shopkeeper)"""
+    """Register a new user (customer or admin)"""
     result = register_user(username, password, role)
     
     if "error" in result:
@@ -158,19 +158,19 @@ async def logout(current_user: dict = Depends(get_current_user)):
         "status": "success"
     }
 
-# ======================== BOOK UPLOAD (SHOPKEEPER ONLY) ========================
+# ======================== BOOK UPLOAD (ADMIN ONLY) ========================
 
 @app.post("/upload-book/")
 async def upload_book(
     image: UploadFile = File(...),
     quantity: int = Form(...),
     shelf: str = Form(...),
-    shopkeeper: dict = Depends(get_shopkeeper_user)
+    admin: dict = Depends(get_admin_user)
 ):
-    """Upload book - SHOPKEEPER ONLY"""
+    """Upload book - ADMIN ONLY"""
     try:
         print(f"\n{'='*70}")
-        print(f"📤 BOOK UPLOAD - Started by: {shopkeeper['username']}")
+        print(f"📤 BOOK UPLOAD - Started by: {admin['username']}")
         print(f"{'='*70}")
         
         image_path = os.path.join(UPLOAD_FOLDER, image.filename)
@@ -271,7 +271,7 @@ async def upload_book(
             "author": author,
             "quantity": quantity,
             "shelf": shelf,
-            "uploaded_by": shopkeeper['username'],
+            "uploaded_by": admin['username'],
             "extraction_method": extraction_method,
             "ocr_debug": ocr_debug
         }
@@ -332,16 +332,134 @@ def search_book(query: str):
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
-# ======================== DEBUG ENDPOINTS (SHOPKEEPER ONLY) ========================
+# ======================== DEBUG ENDPOINTS (ADMIN ONLY) ========================
+
+# ======================== MANUAL BOOK ENTRY (ADMIN ONLY) ========================
+
+@app.post("/add-book-manual/")
+async def add_book_manual(
+    title: str = Form(...),
+    author: str = Form(...),
+    quantity: int = Form(...),
+    shelf: str = Form(...),
+    admin: dict = Depends(get_admin_user)
+):
+    """Add a book manually without uploading an image - ADMIN ONLY"""
+    try:
+        print(f"\n📝 MANUAL BOOK ADDITION - Requested by: {admin['username']}")
+        print(f"   Title: {title}")
+        print(f"   Author: {author}")
+        print(f"   Quantity: {quantity}, Shelf: {shelf}")
+        
+        # Validate inputs
+        if not title or len(title.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Title must be at least 2 characters")
+        if not author or len(author.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Author must be at least 2 characters")
+        if quantity < 1:
+            raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+        if not shelf or len(shelf.strip()) < 1:
+            raise HTTPException(status_code=400, detail="Shelf location cannot be empty")
+        
+        ok = insert_book(title, author, quantity, shelf, isbn=None)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to save book to database")
+        
+        print(f"   ✅ Book added successfully")
+        return {
+            "message": "Book added successfully",
+            "title": title,
+            "author": author,
+            "quantity": quantity,
+            "shelf": shelf,
+            "added_by": admin["username"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Add book error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add book: {str(e)}")
+
+
+# ======================== GET BOOKS FOR EDITING (ADMIN ONLY) ========================
+
+@app.get("/books-for-edit/")
+async def get_books_for_edit(admin: dict = Depends(get_admin_user)):
+    """Get all books with IDs for editing - ADMIN ONLY"""
+    try:
+        books = get_books_with_ids()
+        return {
+            "total_books": len(books),
+            "accessed_by": admin['username'],
+            "books": [
+                {
+                    "id": b[0],
+                    "title": b[1],
+                    "author": b[2],
+                    "quantity": b[3],
+                    "shelf": b[4],
+                    "isbn": b[5]
+                } for b in books
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ======================== UPDATE BOOK (ADMIN ONLY) ========================
+
+@app.put("/update-book/")
+async def update_book_endpoint(
+    book_id: int = Form(...),
+    title: str = Form(None),
+    author: str = Form(None),
+    quantity: int = Form(None),
+    shelf: str = Form(None),
+    admin: dict = Depends(get_admin_user)
+):
+    """Update a book's details (title, author, quantity, shelf) - ADMIN ONLY"""
+    try:
+        print(f"\n🔄 UPDATE BOOK - Requested by: {admin['username']}")
+        print(f"   Book ID: {book_id}")
+        
+        # Validate inputs if provided
+        if title is not None and len(title.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Title must be at least 2 characters")
+        if author is not None and len(author.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Author must be at least 2 characters")
+        if quantity is not None and quantity < 1:
+            raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+        if shelf is not None and len(shelf.strip()) < 1:
+            raise HTTPException(status_code=400, detail="Shelf location cannot be empty")
+        
+        ok = update_book(book_id, title, author, quantity, shelf)
+        
+        if not ok:
+            raise HTTPException(status_code=404, detail=f"Book with ID {book_id} not found")
+        
+        print(f"   ✅ Book updated successfully")
+        return {
+            "message": "Book updated successfully",
+            "book_id": book_id,
+            "updated_by": admin["username"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Update error: {e}")
+        raise HTTPException(status_code=500, detail=f"Update failed: {str(e)}")
+
+
+# ======================== DEBUG ENDPOINTS (ADMIN ONLY) ========================
 
 @app.get("/debug/all-books/")
-async def debug_all_books(shopkeeper: dict = Depends(get_shopkeeper_user)):
-    """Debug: See all books in database - SHOPKEEPER ONLY"""
+async def debug_all_books(admin: dict = Depends(get_admin_user)):
+    """Debug: See all books in database - ADMIN ONLY"""
     try:
         books = get_all_books()
         return {
             "total_books": len(books),
-            "accessed_by": shopkeeper['username'],
+            "accessed_by": admin['username'],
             "books": [
                 {
                     "title": b[0],
@@ -356,14 +474,14 @@ async def debug_all_books(shopkeeper: dict = Depends(get_shopkeeper_user)):
 
 
 @app.post("/debug/reset-database/")
-async def reset_database(shopkeeper: dict = Depends(get_shopkeeper_user)):
-    """Debug: Reset database - SHOPKEEPER ONLY"""
+async def reset_database(admin: dict = Depends(get_admin_user)):
+    """Debug: Reset database - ADMIN ONLY"""
     try:
         delete_all_books()
-        print(f"⚠️ Database reset by {shopkeeper['username']}")
+        print(f"⚠️ Database reset by {admin['username']}")
         return {
             "message": "✅ Database reset successfully",
-            "reset_by": shopkeeper['username'],
+            "reset_by": admin['username'],
             "status": "success"
         }
     except Exception as e:
@@ -371,12 +489,12 @@ async def reset_database(shopkeeper: dict = Depends(get_shopkeeper_user)):
 
 
 @app.get("/debug/list-users/")
-async def list_users(shopkeeper: dict = Depends(get_shopkeeper_user)):
-    """Debug: List all users - SHOPKEEPER ONLY"""
+async def list_users(admin: dict = Depends(get_admin_user)):
+    """Debug: List all users - ADMIN ONLY"""
     users = list_all_users()
     return {
         "total_users": len(users),
-        "accessed_by": shopkeeper['username'],
+        "accessed_by": admin['username'],
         "users": users
     }
 

@@ -18,7 +18,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
 # User roles
-ROLE_SHOPKEEPER = "shopkeeper"
+ROLE_ADMIN = "admin"
 ROLE_CUSTOMER = "customer"
 
 
@@ -48,10 +48,10 @@ def create_users_table():
         """)
         conn.commit()
         
-        # Create default shopkeeper account (username: shopkeeper, password: shopkeeper123)
-        default_user = register_user("shopkeeper", "shopkeeper123", ROLE_SHOPKEEPER, force=True)
+        # Create default admin account (username: admin, password: admin123)
+        default_user = register_user("admin", "admin123", ROLE_ADMIN, force=True)
         if default_user:
-            print("✅ Default shopkeeper account created (username: shopkeeper, password: shopkeeper123)")
+            print("✅ Default admin account created (username: admin, password: admin123)")
         
         conn.close()
         print("✅ Users table initialized")
@@ -86,7 +86,7 @@ def register_user(username: str, password: str, role: str = ROLE_CUSTOMER, force
             return {"error": "Username must be at least 3 characters"}
         if not password or len(password) < 6:
             return {"error": "Password must be at least 6 characters"}
-        if role not in [ROLE_SHOPKEEPER, ROLE_CUSTOMER]:
+        if role not in [ROLE_ADMIN, ROLE_CUSTOMER]:
             return {"error": "Invalid role"}
         
         conn = get_auth_connection()

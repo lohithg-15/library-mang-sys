@@ -4,10 +4,12 @@ An intelligent book management system with AI/OCR book identification, Open Libr
 
 ## Features
 
-**Shopkeeper**
+**Admin**
 - Upload book images: automatic title/author extraction (Gemini AI or EasyOCR/Tesseract)
+- Add books manually without uploading images
+- Edit book details: change quantity and shelf location
 - Book identification via Open Library (canonical title/author, ISBN)
-- Manage inventory: quantity and shelf location
+- Manage inventory and view all books
 - View all books, list users, reset database
 
 **Customer**
@@ -79,7 +81,7 @@ python -m http.server 5500
 
 http://localhost:5500  
 
-**Login:** Shopkeeper `shopkeeper` / `shopkeeper123` — or continue as Customer (no login).
+**Login:** Admin `admin` / `admin123` — or continue as Customer (no login).
 
 ## API Endpoints
 
@@ -91,10 +93,13 @@ http://localhost:5500
 | POST | `/auth/login/` | — | Login |
 | POST | `/auth/register/` | — | Register |
 | GET | `/auth/me/` | Bearer | Current user |
-| POST | `/upload-book/` | Shopkeeper | Upload book image |
-| GET | `/debug/all-books/` | Shopkeeper | List all books |
-| POST | `/debug/reset-database/` | Shopkeeper | Reset DB |
-| GET | `/debug/list-users/` | Shopkeeper | List users |
+| POST | `/upload-book/` | Admin | Upload book image |
+| POST | `/add-book-manual/` | Admin | Add book manually |
+| GET | `/books-for-edit/` | Admin | Get books with IDs |
+| PUT | `/update-book/` | Admin | Update book (qty/shelf) |
+| GET | `/debug/all-books/` | Admin | List all books |
+| POST | `/debug/reset-database/` | Admin | Reset DB |
+| GET | `/debug/list-users/` | Admin | List users |
 
 ## Database
 

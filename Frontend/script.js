@@ -77,13 +77,13 @@ function showAppPage() {
     document.getElementById("appContainer").style.display = "block";
 
     // Show/hide sections based on role
-    const shopkeeperSection = document.getElementById("shopkeeperSection");
+    const adminSection = document.getElementById("adminSection");
     const customerSection = document.getElementById("customerSection");
 
-    if (appState.userRole === "shopkeeper") {
-        shopkeeperSection.style.display = "block";
+    if (appState.userRole === "admin") {
+        adminSection.style.display = "block";
     } else {
-        shopkeeperSection.style.display = "none";
+        adminSection.style.display = "none";
     }
     customerSection.style.display = "block";
 
@@ -91,9 +91,9 @@ function showAppPage() {
     const roleEl = document.getElementById("userRole");
     const nameEl = document.getElementById("userName");
 
-    if (appState.userRole === "shopkeeper") {
-        roleEl.textContent = "🏪 Shopkeeper";
-        roleEl.className = "user-badge shopkeeper";
+    if (appState.userRole === "admin") {
+        roleEl.textContent = "🏪 Admin";
+        roleEl.className = "user-badge admin";
         // Show username in a nice format, capitalize first letter
         const username = appState.user.username || "User";
         const displayName = username.charAt(0).toUpperCase() + username.slice(1);
@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.classList.add("active");
 
             const role = btn.dataset.role;
-            document.getElementById("credentialsSection").style.display = role === "shopkeeper" ? "block" : "none";
+            document.getElementById("credentialsSection").style.display = role === "admin" ? "block" : "none";
             document.getElementById("customerLoginSection").style.display = role === "customer" ? "block" : "none";
         });
     });
@@ -309,7 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Logout button
     document.getElementById("logoutBtn").addEventListener("click", logout);
 
-    // ===== SHOPKEEPER UPLOAD =====
+    // ===== ADMIN UPLOAD =====
     document.getElementById("uploadForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -428,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ===== SHOPKEEPER DEBUG BUTTONS =====
+    // ===== ADMIN DEBUG BUTTONS =====
     document.getElementById("debugBtn").addEventListener("click", async () => {
         const resultDiv = document.getElementById("debugResult");
         resultDiv.innerHTML = "⏳ Loading...";

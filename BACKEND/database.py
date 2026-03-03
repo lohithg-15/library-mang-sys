@@ -146,3 +146,59 @@ def delete_all_books():
     except Exception as e:
         print(f"❌ Error deleting books: {e}")
         return False
+
+def update_book(book_id, title=None, author=None, quantity=None, shelf=None):
+    """Update a book's details (title, author, quantity, shelf)"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        # Build update query dynamically based on what fields are provided
+        updates = []
+        params = []
+        
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+        if author is not None:
+            updates.append("author = ?")
+            params.append(author)
+        if quantity is not None:
+            updates.append("quantity = ?")
+            params.append(quantity)
+        if shelf is not None:
+            updates.append("shelf = ?")
+            params.append(shelf)
+        
+        if not updates:
+            return False  # Nothing to update
+        
+        params.append(book_id)
+        query = f"UPDATE books SET {', '.join(updates)} WHERE id = ?"
+        
+        cursor.execute(query, params)
+        conn.commit()
+        
+        if cursor.rowcount > 0:
+            print(f"✅ Book ID {book_id} updated successfully")
+            return True
+        else:
+            print(f"❌ Book ID {book_id} not found")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error updating book: {e}")
+        return False
+
+def get_books_with_ids():
+    """Get all books with their IDs (for editing)"""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, author, quantity, shelf, isbn FROM books ORDER BY title ASC")
+        results = cursor.fetchall()
+        conn.close()
+        return results
+    except Exception as e:
+        print(f"❌ Error getting books with IDs: {e}")
+        return []
