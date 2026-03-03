@@ -406,6 +406,34 @@ async function updateBookDetails(bookId, title, author, quantity, shelf) {
     }
 }
 
+async function saveExtractedBook(title, author, quantity, shelf) {
+    try {
+        const response = await fetch(`${API_URL}/save-extracted-book/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                title: title,
+                author: author,
+                quantity: parseInt(quantity),
+                shelf: shelf
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to save extracted book");
+        }
+
+        return { success: true, data: data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
 // ====================== EVENT LISTENERS ======================
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -475,34 +503,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (result.success) {
             resultDiv.innerHTML = "";
-            const card = document.createElement("div");
-            card.className = "upload-result-card";
-            card.innerHTML = `
+            
+            // Show extracted data in EDITABLE form
+            const editFormDiv = document.createElement("div");
+            editFormDiv.className = "upload-extraction-card";
+            editFormDiv.innerHTML = `
                 <div class="upload-result-header">
-                    <span class="upload-result-success-icon">✅</span>
-                    <h3>Book Uploaded Successfully!</h3>
+                    <span class="upload-result-success-icon">📋</span>
+                    <h3>Extracted Data - Please Review & Edit</h3>
                 </div>
-                <div class="upload-result-details">
-                    <div class="upload-detail-box">
-                        <div class="upload-detail-label">📖 Title</div>
-                        <div class="upload-detail-value">${result.data.title}</div>
+                <div class="book-edit-row">
+                    <div class="edit-field">
+                        <label>Title:</label>
+                        <input type="text" id="extract-title" value="${escapeHtml(result.data.title)}" />
                     </div>
-                    <div class="upload-detail-box">
-                        <div class="upload-detail-label">👤 Author</div>
-                        <div class="upload-detail-value">${result.data.author}</div>
+                    <div class="edit-field">
+                        <label>Author:</label>
+                        <input type="text" id="extract-author" value="${escapeHtml(result.data.author)}" />
                     </div>
-                    <div class="upload-detail-box">
-                        <div class="upload-detail-label">📦 Quantity</div>
-                        <div class="upload-detail-value">${quantity}</div>
+                    <div class="edit-field">
+                        <label>Quantity:</label>
+                        <input type="number" id="extract-quantity" value="${quantity}" min="1" />
                     </div>
-                    <div class="upload-detail-box">
-                        <div class="upload-detail-label">📍 Shelf</div>
-                        <div class="upload-detail-value">${shelf}</div>
+                    <div class="edit-field">
+                        <label>Shelf:</label>
+                        <input type="text" id="extract-shelf" value="${escapeHtml(shelf)}" />
+                    </div>
+                    <div class="edit-actions">
+                        <button class="btn-save-edit" id="saveExtractedBtn">💾 Save to Database</button>
+                        <button class="btn-cancel-edit" id="cancelExtractedBtn">❌ Cancel</button>
                     </div>
                 </div>
             `;
-            resultDiv.appendChild(card);
-            document.getElementById("uploadForm").reset();
+            resultDiv.appendChild(editFormDiv);
+
+            // Save button handler
+            document.getElementById("saveExtractedBtn").addEventListener("click", async () => {
+                const title = document.getElementById("extract-title").value.trim();
+                const author = document.getElementById("extract-author").value.trim();
+                const qty = document.getElementById("extract-quantity").value;
+                const sh = document.getElementById("extract-shelf").value.trim();
+
+                // Validate
+                if (title.length < 2 || author.length < 2 || qty < 1 || !sh) {
+                    resultDiv.innerHTML = "";
+                    resultDiv.appendChild(createMessage("❌ Please fill in all fields correctly", "error"));
+                    return;
+                }
+
+                resultDiv.innerHTML = "⏳ Saving to database...";
+
+                const saveResult = await saveExtractedBook(title, author, parseInt(qty), sh);
+
+                resultDiv.innerHTML = "";
+
+                if (saveResult.success) {
+                    const successCard = document.createElement("div");
+                    successCard.className = "upload-result-card";
+                    successCard.innerHTML = `
+                        <div class="upload-result-header">
+                            <span class="upload-result-success-icon">✅</span>
+                            <h3>Book Saved Successfully!</h3>
+                        </div>
+                        <div class="upload-result-details">
+                            <div class="upload-detail-box">
+                                <div class="upload-detail-label">📖 Title</div>
+                                <div class="upload-detail-value">${escapeHtml(title)}</div>
+                            </div>
+                            <div class="upload-detail-box">
+                                <div class="upload-detail-label">👤 Author</div>
+                                <div class="upload-detail-value">${escapeHtml(author)}</div>
+                            </div>
+                            <div class="upload-detail-box">
+                                <div class="upload-detail-label">📦 Quantity</div>
+                                <div class="upload-detail-value">${qty}</div>
+                            </div>
+                            <div class="upload-detail-box">
+                                <div class="upload-detail-label">📍 Shelf</div>
+                                <div class="upload-detail-value">${escapeHtml(sh)}</div>
+                            </div>
+                        </div>
+                    `;
+                    resultDiv.appendChild(successCard);
+                    document.getElementById("uploadForm").reset();
+                } else {
+                    resultDiv.appendChild(createMessage(`❌ ${saveResult.error}`, "error"));
+                }
+            });
+
+            // Cancel button handler
+            document.getElementById("cancelExtractedBtn").addEventListener("click", () => {
+                resultDiv.innerHTML = "";
+                document.getElementById("uploadForm").reset();
+            });
         } else {
             resultDiv.appendChild(createMessage(`❌ ${result.error}`, "error"));
         }
@@ -511,6 +604,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Clear upload button
     document.getElementById("clearUploadBtn").addEventListener("click", () => {
         document.getElementById("uploadForm").reset();
+        document.getElementById("uploadResult").innerHTML = "";
     });
 
     // ===== CUSTOMER SEARCH =====

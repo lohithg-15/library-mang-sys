@@ -430,6 +430,15 @@ input[type="file"] {
     animation: slideIn 0.4s ease-out;
 }
 
+.upload-extraction-card {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+    padding: 25px;
+    border-radius: 10px;
+    border-left: 5px solid #ffc107;
+    margin-bottom: 15px;
+    animation: slideIn 0.4s ease-out;
+}
+
 .upload-result-header {
     display: flex;
     align-items: center;
@@ -441,6 +450,10 @@ input[type="file"] {
     color: #155724;
     margin: 0;
     font-size: 1.3em;
+}
+
+.upload-extraction-card .upload-result-header h3 {
+    color: #856404;
 }
 
 .upload-result-success-icon {

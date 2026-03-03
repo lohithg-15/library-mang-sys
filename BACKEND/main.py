@@ -273,19 +273,20 @@ async def upload_book(
         print(f"\n📚 BOOK IDENTIFICATION (for consistent metadata with many books)")
         title, author, isbn_saved = identify_book(title, author, isbn_from_extraction)
 
-        # ============ DATABASE SAVE ============
-        print(f"\n💾 DATABASE SAVE")
-        print(f"   Quantity: {quantity}, Shelf: {shelf}")
-        insert_book(title, author, quantity, shelf, isbn=isbn_saved)
-        print(f"   ✅ Successfully inserted into database")
+        # ============ EXTRACTION COMPLETE - DO NOT AUTO-SAVE ============
+        print(f"\n📋 EXTRACTION COMPLETE - Waiting for admin review")
+        print(f"   Title: {title}")
+        print(f"   Author: {author}")
+        print(f"   Ready for admin to review, edit, and save")
         print(f"\n{'='*70}\n")
 
         return {
-            "message": "Book uploaded successfully",
+            "message": "Book extracted successfully - Ready for review and edit",
             "title": title,
             "author": author,
             "quantity": quantity,
             "shelf": shelf,
+            "isbn": isbn_saved,
             "uploaded_by": admin['username'],
             "extraction_method": extraction_method,
             "ocr_debug": ocr_debug
@@ -391,6 +392,50 @@ async def add_book_manual(
     except Exception as e:
         print(f"❌ Add book error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to add book: {str(e)}")
+
+
+# ======================== SAVE EXTRACTED BOOK (ADMIN ONLY) ========================
+
+@app.post("/save-extracted-book/")
+async def save_extracted_book(
+    request: AddBookRequest,
+    admin: dict = Depends(get_admin_user)
+):
+    """Save extracted book data that was reviewed/edited by admin - ADMIN ONLY"""
+    try:
+        print(f"\n💾 SAVING EXTRACTED BOOK - Requested by: {admin['username']}")
+        print(f"   Title: {request.title}")
+        print(f"   Author: {request.author}")
+        print(f"   Quantity: {request.quantity}, Shelf: {request.shelf}")
+        
+        # Validate inputs
+        if not request.title or len(request.title.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Title must be at least 2 characters")
+        if not request.author or len(request.author.strip()) < 2:
+            raise HTTPException(status_code=400, detail="Author must be at least 2 characters")
+        if request.quantity < 1:
+            raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+        if not request.shelf or len(request.shelf.strip()) < 1:
+            raise HTTPException(status_code=400, detail="Shelf location cannot be empty")
+        
+        ok = insert_book(request.title, request.author, request.quantity, request.shelf, isbn=None)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Failed to save book to database")
+        
+        print(f"   ✅ Extracted book saved successfully")
+        return {
+            "message": "Extracted book saved successfully",
+            "title": request.title,
+            "author": request.author,
+            "quantity": request.quantity,
+            "shelf": request.shelf,
+            "saved_by": admin["username"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Save extracted error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save: {str(e)}")
 
 
 # ======================== GET BOOKS FOR EDITING (ADMIN ONLY) ========================
