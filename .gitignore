@@ -36,15 +36,16 @@ ENV/
 *~
 .DS_Store
 
-# Database (optional - remove if you want to track)
-# books.db
-
-# Uploads (optional - remove if you want to track)
-# BACKEND/uploads/
-
 # Environment variables
 .env
 .env.local
+
+# Database files (auto-created on startup)
+books.db
+*.db
+
+# Uploads folder
+BACKEND/uploads/
 
 # Node modules (if using any frontend tools)
 node_modules/

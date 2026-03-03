@@ -5,7 +5,8 @@ An intelligent book management system with AI/OCR book identification, Open Libr
 ## Features
 
 **Admin**
-- Upload book images: automatic title/author extraction (Gemini AI or EasyOCR/Tesseract)
+- Upload book images: automatic title/author extraction (Gemini AI or EasyOCR/Tesseract) with editable review form
+- Edit extracted data before saving to database (can fix OCR errors)
 - Add books manually without uploading images
 - Edit book details: change quantity and shelf location
 - Book identification via Open Library (canonical title/author, ISBN)
@@ -21,6 +22,13 @@ An intelligent book management system with AI/OCR book identification, Open Libr
 - JWT auth, PBKDF2 password hashing, RBAC
 - SQLite with indexes for fast search with many books
 - Optional ISBN storage for identification
+
+## Security
+
+- **DO NOT commit `.env`** - It's in `.gitignore` for a reason. Contains API keys.
+- Always use `.env.example` as a template and create `.env` locally with your own keys.
+- Change the default admin password in production.
+- Use environment variables for sensitive data (API keys, JWT secret).
 
 ## Project Structure
 
@@ -93,7 +101,8 @@ http://localhost:5500
 | POST | `/auth/login/` | — | Login |
 | POST | `/auth/register/` | — | Register |
 | GET | `/auth/me/` | Bearer | Current user |
-| POST | `/upload-book/` | Admin | Upload book image |
+| POST | `/upload-book/` | Admin | Upload & extract from image |
+| POST | `/save-extracted-book/` | Admin | Save extracted book (after review) |
 | POST | `/add-book-manual/` | Admin | Add book manually |
 | GET | `/books-for-edit/` | Admin | Get books with IDs |
 | PUT | `/update-book/` | Admin | Update book (qty/shelf) |

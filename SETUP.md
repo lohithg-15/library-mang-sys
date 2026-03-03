@@ -39,9 +39,28 @@ http://localhost:5500
 
 ## What you can do
 
-**Admin:** Upload book images (auto title/author + Open Library identification), add books manually, edit quantity/shelf, view/reset books, list users.  
+**Admin Workflows:**
 
-**Customer:** Search by title or author (typo-tolerant; “Did you mean?” when applicable). No login.
+1. **Upload & Review:**
+   - Upload a book image
+   - System extracts title/author using Gemini AI or OCR
+   - Review extracted data in an editable form (yellow background)
+   - Edit any field if OCR made mistakes
+   - Click **"Save to Database"** to confirm
+   - OR Click **"Cancel"** to discard
+
+2. **Add Manually:**
+   - Enter title, author, quantity, shelf location directly
+   - Click **"Add Book"** to save immediately
+
+3. **Manage & Edit:**
+   - Click **"Manage Books"** tab
+   - Click **"Load Books"** to see all books
+   - Click **"Edit"** button on any book
+   - Modify quantity/shelf/title/author
+   - Click **"Save"** to update database
+
+**Customer:** Search by title or author (typo-tolerant; "Did you mean?" when applicable). No login needed.
 
 ---
 
