@@ -119,6 +119,75 @@ function createMessage(text, type) {
     return msgDiv;
 }
 
+function showBookEditForm(book, allBooks, tableDiv, resultDiv) {
+    // Replace the table with the edit form
+    const editFormHtml = `
+        <div class="book-edit-row">
+            <div class="edit-field">
+                <label>Title:</label>
+                <input type="text" id="edit-title" value="${escapeHtml(book.title)}" />
+            </div>
+            <div class="edit-field">
+                <label>Author:</label>
+                <input type="text" id="edit-author" value="${escapeHtml(book.author)}" />
+            </div>
+            <div class="edit-field">
+                <label>Quantity:</label>
+                <input type="number" id="edit-quantity" value="${book.quantity}" min="1" />
+            </div>
+            <div class="edit-field">
+                <label>Shelf:</label>
+                <input type="text" id="edit-shelf" value="${escapeHtml(book.shelf)}" />
+            </div>
+            <div class="edit-actions">
+                <button class="btn-save-edit">💾 Save</button>
+                <button class="btn-cancel-edit">❌ Cancel</button>
+            </div>
+        </div>
+    `;
+    tableDiv.innerHTML = editFormHtml;
+
+    // Save button handler
+    tableDiv.querySelector(".btn-save-edit").addEventListener("click", async () => {
+        const title = document.getElementById("edit-title").value.trim();
+        const author = document.getElementById("edit-author").value.trim();
+        const quantity = document.getElementById("edit-quantity").value;
+        const shelf = document.getElementById("edit-shelf").value.trim();
+
+        if (title.length < 2 || author.length < 2 || quantity < 1 || !shelf) {
+            resultDiv.innerHTML = "";
+            resultDiv.appendChild(createMessage("❌ Please fill in all fields correctly", "error"));
+            return;
+        }
+
+        resultDiv.innerHTML = "⏳ Updating...";
+
+        const result = await updateBookDetails(book.id, title, author, quantity, shelf);
+
+        resultDiv.innerHTML = "";
+
+        if (result.success) {
+            resultDiv.appendChild(createMessage("✅ Book updated successfully!", "success"));
+            // Reload the books list
+            setTimeout(() => {
+                document.getElementById("loadBooksBtn").click();
+            }, 1000);
+        } else {
+            resultDiv.appendChild(createMessage(`❌ ${result.error}`, "error"));
+            // Show edit form again
+            setTimeout(() => {
+                showBookEditForm(book, allBooks, tableDiv, resultDiv);
+            }, 1000);
+        }
+    });
+
+    // Cancel button handler
+    tableDiv.querySelector(".btn-cancel-edit").addEventListener("click", () => {
+        // Reload the books list
+        document.getElementById("loadBooksBtn").click();
+    });
+}
+
 // ====================== BACKEND STATUS ======================
 
 async function checkBackendStatus() {
@@ -254,6 +323,81 @@ async function listUsers() {
 
         if (!response.ok) {
             throw new Error(data.detail || "Failed to fetch users");
+        }
+
+        return { success: true, data: data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+async function addBookManually(title, author, quantity, shelf) {
+    try {
+        const response = await fetch(`${API_URL}/add-book-manual/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                title: title,
+                author: author,
+                quantity: parseInt(quantity),
+                shelf: shelf
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to add book");
+        }
+
+        return { success: true, data: data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+async function getBooksForEdit() {
+    try {
+        const response = await fetch(`${API_URL}/books-for-edit/`, {
+            headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to fetch books");
+        }
+
+        return { success: true, data: data };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+async function updateBookDetails(bookId, title, author, quantity, shelf) {
+    try {
+        const response = await fetch(`${API_URL}/update-book/`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify({
+                book_id: bookId,
+                title: title,
+                author: author,
+                quantity: parseInt(quantity),
+                shelf: shelf
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to update book");
         }
 
         return { success: true, data: data };
@@ -425,6 +569,151 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("searchQuery").addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
             document.getElementById("searchBtn").click();
+        }
+    });
+
+    // ===== TAB SWITCHING =====
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            // Remove active class from all tabs
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
+            
+            // Add active class to clicked tab
+            btn.classList.add("active");
+            const tabId = btn.getAttribute("data-tab");
+            const tabContent = document.getElementById(tabId);
+            if (tabContent) {
+                tabContent.classList.add("active");
+                tabContent.style.display = "block";
+            }
+        });
+    });
+
+    // ===== MANUAL BOOK ENTRY =====
+    document.getElementById("manualBookForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const resultDiv = document.getElementById("manualBookResult");
+        resultDiv.innerHTML = "";
+
+        const title = document.getElementById("manualTitle").value.trim();
+        const author = document.getElementById("manualAuthor").value.trim();
+        const quantity = document.getElementById("manualQuantity").value;
+        const shelf = document.getElementById("manualShelf").value.trim();
+
+        // Validate inputs
+        if (title.length < 2) {
+            resultDiv.appendChild(createMessage("❌ Title must be at least 2 characters", "error"));
+            return;
+        }
+        if (author.length < 2) {
+            resultDiv.appendChild(createMessage("❌ Author must be at least 2 characters", "error"));
+            return;
+        }
+        if (quantity < 1) {
+            resultDiv.appendChild(createMessage("❌ Quantity must be at least 1", "error"));
+            return;
+        }
+        if (!shelf) {
+            resultDiv.appendChild(createMessage("❌ Please enter a shelf location", "error"));
+            return;
+        }
+
+        resultDiv.appendChild(createMessage("⏳ Adding book...", "loading"));
+
+        const result = await addBookManually(title, author, quantity, shelf);
+
+        if (result.success) {
+            resultDiv.innerHTML = "";
+            const card = document.createElement("div");
+            card.className = "upload-result-card";
+            card.innerHTML = `
+                <div class="upload-result-header">
+                    <span class="upload-result-success-icon">✅</span>
+                    <h3>Book Added Successfully!</h3>
+                </div>
+                <div class="upload-result-details">
+                    <div class="upload-detail-box">
+                        <div class="upload-detail-label">📖 Title</div>
+                        <div class="upload-detail-value">${escapeHtml(title)}</div>
+                    </div>
+                    <div class="upload-detail-box">
+                        <div class="upload-detail-label">👤 Author</div>
+                        <div class="upload-detail-value">${escapeHtml(author)}</div>
+                    </div>
+                    <div class="upload-detail-box">
+                        <div class="upload-detail-label">📦 Quantity</div>
+                        <div class="upload-detail-value">${quantity}</div>
+                    </div>
+                    <div class="upload-detail-box">
+                        <div class="upload-detail-label">📍 Shelf</div>
+                        <div class="upload-detail-value">${escapeHtml(shelf)}</div>
+                    </div>
+                </div>
+            `;
+            resultDiv.appendChild(card);
+            document.getElementById("manualBookForm").reset();
+        } else {
+            resultDiv.appendChild(createMessage(`❌ ${result.error}`, "error"));
+        }
+    });
+
+    // ===== MANAGE BOOKS =====
+    document.getElementById("loadBooksBtn").addEventListener("click", async () => {
+        const resultDiv = document.getElementById("manageBooksResult");
+        const listDiv = document.getElementById("booksList");
+        const tableDiv = document.getElementById("booksTable");
+
+        resultDiv.innerHTML = "⏳ Loading books...";
+        tableDiv.innerHTML = "";
+
+        const result = await getBooksForEdit();
+
+        resultDiv.innerHTML = "";
+
+        if (result.success) {
+            if (result.data.books.length === 0) {
+                resultDiv.appendChild(createMessage("📭 No books in database", "info"));
+                listDiv.style.display = "none";
+            } else {
+                listDiv.style.display = "block";
+                const html = `
+                    <table class="books-table">
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Quantity</th>
+                            <th>Shelf</th>
+                            <th>Action</th>
+                        </tr>
+                        ${result.data.books.map(book => `
+                            <tr>
+                                <td>${escapeHtml(book.title)}</td>
+                                <td>${escapeHtml(book.author)}</td>
+                                <td>${book.quantity}</td>
+                                <td>${escapeHtml(book.shelf)}</td>
+                                <td><button class="book-edit-btn" data-id="${book.id}">✏️ Edit</button></td>
+                            </tr>
+                        `).join("")}
+                    </table>
+                `;
+                tableDiv.innerHTML = html;
+
+                // Add event listeners to edit buttons
+                tableDiv.querySelectorAll(".book-edit-btn").forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        const bookId = btn.getAttribute("data-id");
+                        const book = result.data.books.find(b => b.id === parseInt(bookId));
+                        if (book) {
+                            showBookEditForm(book, result.data.books, tableDiv, resultDiv);
+                        }
+                    });
+                });
+            }
+        } else {
+            resultDiv.appendChild(createMessage(`❌ ${result.error}`, "error"));
+            listDiv.style.display = "none";
         }
     });
 

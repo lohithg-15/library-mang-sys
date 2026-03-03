@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import shutil
 import os
 import sys
@@ -28,6 +29,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ====================== PYDANTIC MODELS ======================
+class AddBookRequest(BaseModel):
+    title: str
+    author: str
+    quantity: int
+    shelf: str
+
+class UpdateBookRequest(BaseModel):
+    book_id: int
+    title: Optional[str] = None
+    author: Optional[str] = None
+    quantity: Optional[int] = None
+    shelf: Optional[str] = None
 
 UPLOAD_FOLDER = "uploads"
 BACKEND_READY = {"ocr": False, "database": False, "auth": False}
@@ -338,40 +353,37 @@ def search_book(query: str):
 
 @app.post("/add-book-manual/")
 async def add_book_manual(
-    title: str = Form(...),
-    author: str = Form(...),
-    quantity: int = Form(...),
-    shelf: str = Form(...),
+    request: AddBookRequest,
     admin: dict = Depends(get_admin_user)
 ):
     """Add a book manually without uploading an image - ADMIN ONLY"""
     try:
         print(f"\n📝 MANUAL BOOK ADDITION - Requested by: {admin['username']}")
-        print(f"   Title: {title}")
-        print(f"   Author: {author}")
-        print(f"   Quantity: {quantity}, Shelf: {shelf}")
+        print(f"   Title: {request.title}")
+        print(f"   Author: {request.author}")
+        print(f"   Quantity: {request.quantity}, Shelf: {request.shelf}")
         
         # Validate inputs
-        if not title or len(title.strip()) < 2:
+        if not request.title or len(request.title.strip()) < 2:
             raise HTTPException(status_code=400, detail="Title must be at least 2 characters")
-        if not author or len(author.strip()) < 2:
+        if not request.author or len(request.author.strip()) < 2:
             raise HTTPException(status_code=400, detail="Author must be at least 2 characters")
-        if quantity < 1:
+        if request.quantity < 1:
             raise HTTPException(status_code=400, detail="Quantity must be at least 1")
-        if not shelf or len(shelf.strip()) < 1:
+        if not request.shelf or len(request.shelf.strip()) < 1:
             raise HTTPException(status_code=400, detail="Shelf location cannot be empty")
         
-        ok = insert_book(title, author, quantity, shelf, isbn=None)
+        ok = insert_book(request.title, request.author, request.quantity, request.shelf, isbn=None)
         if not ok:
             raise HTTPException(status_code=500, detail="Failed to save book to database")
         
         print(f"   ✅ Book added successfully")
         return {
             "message": "Book added successfully",
-            "title": title,
-            "author": author,
-            "quantity": quantity,
-            "shelf": shelf,
+            "title": request.title,
+            "author": request.author,
+            "quantity": request.quantity,
+            "shelf": request.shelf,
             "added_by": admin["username"],
         }
     except HTTPException:
@@ -410,37 +422,33 @@ async def get_books_for_edit(admin: dict = Depends(get_admin_user)):
 
 @app.put("/update-book/")
 async def update_book_endpoint(
-    book_id: int = Form(...),
-    title: str = Form(None),
-    author: str = Form(None),
-    quantity: int = Form(None),
-    shelf: str = Form(None),
+    request: UpdateBookRequest,
     admin: dict = Depends(get_admin_user)
 ):
     """Update a book's details (title, author, quantity, shelf) - ADMIN ONLY"""
     try:
         print(f"\n🔄 UPDATE BOOK - Requested by: {admin['username']}")
-        print(f"   Book ID: {book_id}")
+        print(f"   Book ID: {request.book_id}")
         
         # Validate inputs if provided
-        if title is not None and len(title.strip()) < 2:
+        if request.title is not None and len(request.title.strip()) < 2:
             raise HTTPException(status_code=400, detail="Title must be at least 2 characters")
-        if author is not None and len(author.strip()) < 2:
+        if request.author is not None and len(request.author.strip()) < 2:
             raise HTTPException(status_code=400, detail="Author must be at least 2 characters")
-        if quantity is not None and quantity < 1:
+        if request.quantity is not None and request.quantity < 1:
             raise HTTPException(status_code=400, detail="Quantity must be at least 1")
-        if shelf is not None and len(shelf.strip()) < 1:
+        if request.shelf is not None and len(request.shelf.strip()) < 1:
             raise HTTPException(status_code=400, detail="Shelf location cannot be empty")
         
-        ok = update_book(book_id, title, author, quantity, shelf)
+        ok = update_book(request.book_id, request.title, request.author, request.quantity, request.shelf)
         
         if not ok:
-            raise HTTPException(status_code=404, detail=f"Book with ID {book_id} not found")
+            raise HTTPException(status_code=404, detail=f"Book with ID {request.book_id} not found")
         
         print(f"   ✅ Book updated successfully")
         return {
             "message": "Book updated successfully",
-            "book_id": book_id,
+            "book_id": request.book_id,
             "updated_by": admin["username"],
         }
     except HTTPException:
